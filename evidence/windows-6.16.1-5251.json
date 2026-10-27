@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "product_version": "6.16.1",
+  "build": "5251",
+  "artifacts": [
+    {
+      "name": "lanplay_tun.dll",
+      "size": 2595320,
+      "sha256": "26876faf8f84f0664d96b556bc9c203d2e8ae40e1035861c8c173c13991a58de"
+    },
+    {
+      "name": "uu.exe",
+      "size": 14871032,
+      "sha256": "967c86c19ccbb05a151e522288389e0f842c21c52a94924ca495d846ea3e76fb"
+    },
+    {
+      "name": "wfp/lanplay/lanplaywfp.sys",
+      "size": 45832,
+      "sha256": "c55afd50ef7dd13df105df1ced6dbc6267f24c825c53cbef617b8024901a5bf5"
+    }
+  ],
+  "abi": {
+    "library": "lanplay_tun.dll",
+    "calling_convention": "cdecl",
+    "join_room_magic": 34353,
+    "minimum_config_bytes": 1168,
+    "exports": [
+      "is_wintun_in_use",
+      "isblank",
+      "join_room",
+      "leave_room",
+      "switch_game",
+      "switch_room",
+      "update_room_members"
+    ]
+  }
+}

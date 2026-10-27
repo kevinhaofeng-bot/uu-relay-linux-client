@@ -1,0 +1,24 @@
+[Unit]
+Description=UU LAN Play native Linux client
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/uu-linux-client/protocol-ready
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/uu-linux-client run --config /etc/uu-linux-client/config.json --interface uu0
+Restart=on-failure
+RestartSec=10s
+TimeoutStopSec=20s
+User=uu-lan
+Group=uu-lan
+UMask=0077
+AmbientCapabilities=CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_ADMIN
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+
+[Install]
+WantedBy=multi-user.target

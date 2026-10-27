@@ -1,0 +1,9 @@
+{
+  "room_id": "AB12345",
+  "client_id": "router-linux",
+  "overlay_address": "172.20.0.2",
+  "session_id": "replace-with-local-session-id",
+  "session_token": "replace-with-local-secret",
+  "mobile": "",
+  "room_password": "replace-with-local-secret-if-required"
+}
