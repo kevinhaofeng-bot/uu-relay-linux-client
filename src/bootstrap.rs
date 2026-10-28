@@ -140,11 +140,16 @@ impl OfficialRoomJoin {
         let self_member = self_members[0];
         let self_is_online = self_member.member.is_online;
 
+        let user_id = data.user.user_id.into_string();
+        let client_id = match data.user.product.as_str() {
+            "android" => format!("{user_id}@android"),
+            _ => user_id,
+        };
         let bootstrap = JoinBootstrap::from_wire(
             JoinWire {
                 server_ip: self_member.member.server_ip.clone(),
                 server_port: self_member.member.server_port,
-                user_id: data.user.user_id.into_string(),
+                user_id: client_id,
                 client_lan_ip: self_member.member.client_lan_ip.clone(),
                 client_lan_net: data.app.client_lan_net,
                 room_id: expected_room_id.to_owned(),
@@ -347,6 +352,8 @@ struct OfficialRoomWire {
 #[derive(Deserialize)]
 struct OfficialUserWire {
     user_id: OfficialUserIdWire,
+    #[serde(default)]
+    product: String,
 }
 
 #[derive(Deserialize)]
@@ -401,4 +408,28 @@ pub enum BootstrapError {
     DuplicateMember(Ipv4Addr),
     #[error("UU room response contains {0} self members; expected exactly one")]
     AmbiguousSelfMember(usize),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::OfficialRoomJoin;
+
+    #[test]
+    fn android_room_identity_uses_the_native_client_id_suffix() {
+        let input = br#"{
+          "code":0,
+          "data":{
+            "room":{"room_id":"AB12345","password":"p","members":[
+              {"is_self":true,"is_online":true,"client_lan_ip":"172.19.163.4","server_ip":"203.0.113.8","server_port":4003}
+            ]},
+            "user":{"user_id":1234567890,"product":"android"},
+            "app":{"client_lan_net":"172.19.163.0/24","acc":"a"}
+          }
+        }"#;
+
+        let joined = OfficialRoomJoin::parse_http_response(input, "AB12345")
+            .expect("valid Android room response");
+
+        assert_eq!(joined.bootstrap.user_id, "1234567890@android");
+    }
 }

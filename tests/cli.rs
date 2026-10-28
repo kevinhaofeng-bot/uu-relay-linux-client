@@ -65,7 +65,13 @@ fn run_requires_complete_official_credentials_before_touching_network_or_tun() {
         }"#,
     );
 
-    let output = run(&["run", "--config", path_arg(&config), "--interface", "uu0"]);
+    let output = run(&[
+        "run",
+        "--config",
+        path_arg(&config),
+        "--interface",
+        native_test_interface(),
+    ]);
 
     assert_eq!(output.status.code(), Some(2));
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("JSON output");
@@ -77,11 +83,45 @@ fn run_requires_complete_official_credentials_before_touching_network_or_tun() {
     fs::remove_file(config).expect("remove config");
 }
 
+#[cfg(target_os = "macos")]
+#[test]
+fn macos_run_rejects_linux_interface_name_before_touching_network() {
+    let config = write_private_fixture(
+        "config-macos-interface",
+        r#"{
+          "room_id": "AB12345",
+          "client_id": "mac-native",
+          "overlay_address": "172.19.163.3",
+          "vlan_session": "never-print-vlan-session"
+        }"#,
+    );
+
+    let output = run(&["run", "--config", path_arg(&config), "--interface", "uu0"]);
+
+    assert_eq!(output.status.code(), Some(2));
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("JSON output");
+    assert_eq!(value["ok"], false);
+    assert_eq!(value["code"], "invalid_interface");
+    assert!(!combined(&output).contains("never-print-vlan-session"));
+
+    fs::remove_file(config).expect("remove config");
+}
+
 fn run(args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_uu-linux-client"))
         .args(args)
         .output()
         .expect("run uu-linux-client")
+}
+
+#[cfg(target_os = "linux")]
+fn native_test_interface() -> &'static str {
+    "uu0"
+}
+
+#[cfg(target_os = "macos")]
+fn native_test_interface() -> &'static str {
+    "utun15"
 }
 
 fn write_private_fixture(prefix: &str, contents: &str) -> PathBuf {

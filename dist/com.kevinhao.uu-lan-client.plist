@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.kevinhao.uu-lan-client</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/libexec/uu-linux-client</string>
+    <string>run</string>
+    <string>--config</string>
+    <string>/Library/Application Support/UU LAN Client/config.json</string>
+    <string>--interface</string>
+    <string>utun63</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>Umask</key>
+  <integer>63</integer>
+
+  <key>StandardOutPath</key>
+  <string>/Library/Logs/UU LAN Client/client.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Library/Logs/UU LAN Client/client.log</string>
+</dict>
+</plist>

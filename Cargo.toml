@@ -1,12 +1,12 @@
 [package]
 name = "uu-linux-client"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.94"
-description = "Unofficial native Linux client for UU LAN Play relay and peer-to-peer rooms"
+description = "Unofficial native Linux and macOS client for UU LAN Play relay and peer-to-peer rooms"
 repository = "https://github.com/kevinhaofeng-bot/uu-relay-linux-client"
 readme = "README.md"
-keywords = ["linux", "tun", "lan-play", "p2p"]
+keywords = ["linux", "macos", "tun", "lan-play", "p2p"]
 categories = ["network-programming"]
 publish = false
 
@@ -24,6 +24,6 @@ sha2 = "0.10"
 thiserror = "2"
 zeroize = "1"
 
-[target.'cfg(target_os = "linux")'.dependencies]
+[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
 libc = "0.2"
 signal-hook = "0.3"

@@ -7,11 +7,14 @@ use clap::{Parser, Subcommand};
 use serde_json::json;
 use uu_linux_client::config::ClientConfig;
 use uu_linux_client::evidence::EvidenceManifest;
-use uu_linux_client::tun::LinuxTunBackend;
+#[cfg(target_os = "linux")]
+use uu_linux_client::tun::LinuxTunBackend as NativeTunBackend;
+#[cfg(target_os = "macos")]
+use uu_linux_client::tun::MacOsTunBackend as NativeTunBackend;
 
 #[derive(Debug, Parser)]
 #[command(name = "uu-linux-client")]
-#[command(about = "Headless UU LAN Play Linux client foundation")]
+#[command(about = "Headless native UU LAN Play client")]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -33,11 +36,12 @@ enum Command {
         #[arg(long)]
         path: PathBuf,
     },
-    /// Start the native Linux room client.
+    /// Start the native room client.
     Run {
         #[arg(long)]
         config: PathBuf,
-        #[arg(long, default_value = "uu0")]
+        #[cfg_attr(target_os = "macos", arg(long, default_value = "utun63"))]
+        #[cfg_attr(not(target_os = "macos"), arg(long, default_value = "uu0"))]
         interface: String,
     },
 }
@@ -115,7 +119,7 @@ fn run(config_path: PathBuf, interface: String) -> ExitCode {
             );
         }
     };
-    if let Err(error) = LinuxTunBackend::new(interface.clone()) {
+    if let Err(error) = NativeTunBackend::new(interface.clone()) {
         return emit(
             2,
             json!({"ok": false, "code": "invalid_interface", "error": error.to_string()}),
@@ -150,7 +154,7 @@ fn run(config_path: PathBuf, interface: String) -> ExitCode {
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 fn run_platform(config: &ClientConfig, interface: String) -> Result<(), String> {
     use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, Ordering};
@@ -159,9 +163,18 @@ fn run_platform(config: &ClientConfig, interface: String) -> Result<(), String> 
     use signal_hook::consts::signal::{SIGINT, SIGTERM};
     use uu_linux_client::official_api::OfficialApiClient;
     use uu_linux_client::session::{SessionSettings, TcpRoomSession};
+    use uu_linux_client::tun::TunBackend;
+    #[cfg(target_os = "linux")]
     use uu_linux_client::tun::{
-        TunBackend, configure_linux_interface, configure_linux_member_routes,
-        linux_interface_commands,
+        configure_linux_interface as configure_native_interface,
+        configure_linux_member_routes as configure_native_member_routes,
+        linux_interface_commands as native_interface_commands,
+    };
+    #[cfg(target_os = "macos")]
+    use uu_linux_client::tun::{
+        configure_macos_interface as configure_native_interface,
+        configure_macos_member_routes as configure_native_member_routes,
+        macos_interface_commands as native_interface_commands,
     };
     use uu_linux_client::workers::{BridgeWorkers, WorkerSettings};
 
@@ -203,7 +216,7 @@ fn run_platform(config: &ClientConfig, interface: String) -> Result<(), String> 
             ));
         }
         let overlay_network = bootstrap.client_lan_net().to_owned();
-        linux_interface_commands(&interface, local_address, &overlay_network)
+        native_interface_commands(&interface, local_address, &overlay_network)
             .map_err(|error| error.to_string())?;
         let endpoint = bootstrap.server_endpoint();
         let request = bootstrap.auth_request();
@@ -214,11 +227,12 @@ fn run_platform(config: &ClientConfig, interface: String) -> Result<(), String> 
         )
         .map_err(|error| error.to_string())?;
 
-        let mut backend = LinuxTunBackend::new(interface.clone()).map_err(|e| e.to_string())?;
+        let mut backend = NativeTunBackend::new(interface.clone()).map_err(|e| e.to_string())?;
         let mut tun = backend
             .create(IpAddr::V4(local_address))
             .map_err(|error| error.to_string())?;
-        if let Err(error) = configure_linux_interface(&interface, local_address, &overlay_network) {
+        if let Err(error) = configure_native_interface(&interface, local_address, &overlay_network)
+        {
             let _ = tun.close();
             return Err(error.to_string());
         }
@@ -227,7 +241,7 @@ fn run_platform(config: &ClientConfig, interface: String) -> Result<(), String> 
             .iter()
             .map(|member| member.client_lan_ip())
             .collect::<Vec<_>>();
-        if let Err(error) = configure_linux_member_routes(
+        if let Err(error) = configure_native_member_routes(
             &interface,
             local_address,
             &overlay_network,
@@ -300,7 +314,7 @@ fn run_platform(config: &ClientConfig, interface: String) -> Result<(), String> 
                         .iter()
                         .map(|member| member.client_lan_ip())
                         .collect::<Vec<_>>();
-                    if let Err(error) = configure_linux_member_routes(
+                    if let Err(error) = configure_native_member_routes(
                         &interface,
                         local_address,
                         &overlay_network,
@@ -344,10 +358,10 @@ fn run_platform(config: &ClientConfig, interface: String) -> Result<(), String> 
     }
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 fn run_platform(_config: &ClientConfig, _interface: String) -> Result<(), String> {
     let _ = IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED);
-    Err("the native UU client can run only on Linux".to_owned())
+    Err("the native UU client can run only on Linux or macOS".to_owned())
 }
 
 fn emit(code: u8, value: serde_json::Value) -> ExitCode {
